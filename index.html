@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>String 0A Checker</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:#f1f4f7;color:#263238;font-family:Arial,"Noto Sans Thai",sans-serif}
+.header{position:sticky;top:0;z-index:20;background:#1976d2;color:#fff;text-align:center;padding:13px 10px;box-shadow:0 2px 8px #0003}
+.header h1{margin:0;font-size:23px}.header small{font-size:15px}
+.container{max-width:720px;margin:auto;padding:12px}
+.card{background:#fff;border-radius:16px;padding:14px;margin-bottom:12px;box-shadow:0 2px 8px #0001}
+.title{font-size:19px;font-weight:800;margin-bottom:11px}
+.path{background:#e3f2fd;color:#0d47a1;border-radius:12px;padding:11px;text-align:center;font-size:19px;font-weight:800}
+.note{font-size:13px;color:#6b7280;margin-top:8px;line-height:1.45}
+.house{display:grid;grid-template-columns:repeat(5,1fr);gap:9px}
+.inv{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.pick{border:0;border-radius:12px;background:#e7edf3;color:#263238;font-weight:800;font-size:17px;min-height:54px;padding:9px 4px}
+.pick.active{background:#1976d2;color:#fff}
+.pick:active,.status:active,.action:active{transform:scale(.97)}
+.cm-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.current-cm{background:#e3f2fd;color:#1565c0;border-radius:11px;padding:10px;text-align:center;font-size:19px;font-weight:900;margin-bottom:10px}
+.string-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.string-grid .pick{min-height:52px;font-size:16px}
+.string-grid .checked{background:#fff3cd;color:#765600}
+.string-grid .problem{background:#ffcdd2;color:#9b1c1c}
+.badge{display:inline-block;background:#e8f5e9;color:#2e7d32;border-radius:20px;padding:4px 9px;font-size:14px}
+.count{text-align:center;color:#667085;margin-top:10px}
+.hidden{display:none!important}
+.status-card{display:none}
+.status-card.show{display:block}
+.selected{text-align:center;font-size:22px;font-weight:900;color:#0d47a1;margin-bottom:13px}
+.status-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
+.status{border:0;border-radius:14px;min-height:68px;padding:10px 5px;font-size:17px;font-weight:800;color:#fff}
+.normal{background:#2e7d32}.fuse{background:#ef6c00}.plus{background:#c62828}
+.minus{background:#1565c0}.ground{background:#6a1b9a}.loose{background:#f9a825;color:#222}
+.result{border-top:1px solid #eee;padding-top:10px;margin-top:10px}
+.result:first-child{border-top:0;margin-top:0}
+.result-head{font-weight:900;color:#1565c0;margin-bottom:5px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px;background:#f7f8fa;border-radius:10px;padding:10px;margin-bottom:6px}
+.row-name{font-weight:800}.row-status{font-weight:700}
+.del{border:0;background:#e53935;color:#fff;border-radius:8px;padding:8px 10px}
+.empty{text-align:center;color:#777;padding:18px}
+.action{width:100%;border:0;border-radius:14px;padding:17px;margin-top:8px;font-size:19px;font-weight:900}
+.save{background:#2e7d32;color:#fff}.clear{background:#eceff1;color:#263238}
+@media(max-width:430px){
+ .string-grid{grid-template-columns:repeat(3,1fr)}
+ .string-grid .pick{font-size:14px;min-height:50px}
+}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>🔧 String 0A Checker</h1>
+  <small>House → INV → String</small>
+</div>
+
+<div class="container">
+  <div class="card">
+    <div class="title">📍 ตำแหน่ง</div>
+    <div class="path" id="path">เลือก House ก่อน</div>
+    <div class="note">เลือก House และ INV แล้วจะขึ้น String ทั้ง 6 CM รวม 84 String ให้กดตรงตัวที่พบได้เลย ไม่ต้องเลือก CM เพิ่ม</div>
+  </div>
+
+  <div class="card">
+    <div class="title">1️⃣ House <span class="badge">37</span></div>
+    <div class="house" id="houseGrid"></div>
+  </div>
+
+  <div class="card hidden" id="invCard">
+    <div class="title">2️⃣ Inverter <span class="badge">2</span></div>
+    <div class="inv">
+      <button class="pick" id="inv1" onclick="selectInv(1)">INV 1</button>
+      <button class="pick" id="inv2" onclick="selectInv(2)">INV 2</button>
+    </div>
+  </div>
+
+  <div class="card hidden" id="cmCard">
+    <div class="title">3️⃣ CM <span class="badge">6 ตัว</span></div>
+    <div class="cm-grid" id="cmGrid"></div>
+  </div>
+
+  <div class="card hidden" id="stringCard">
+    <div class="title">4️⃣ String <span class="badge">14 ตัว</span></div>
+    <div class="current-cm" id="currentCm"></div>
+    <div class="string-grid" id="stringGrid"></div>
+    <div class="count" id="countText">ยังไม่มีรายการ</div>
+  </div>
+
+  <div class="card status-card" id="statusCard">
+    <div class="selected" id="selectedName"></div>
+    <div class="title">เลือกสถานะ</div>
+    <div class="status-grid">
+      <button class="status normal" onclick="saveStatus('ปกติ')">🟢 ปกติ</button>
+      <button class="status fuse" onclick="saveStatus('ฟิวส์ขาด')">🟠 ฟิวส์ขาด</button>
+      <button class="status plus" onclick="saveStatus('ฟิวส์บวกขาด')">🔴 ฟิวส์บวกขาด</button>
+      <button class="status minus" onclick="saveStatus('ฟิวส์ลบขาด')">🔵 ฟิวส์ลบขาด</button>
+      <button class="status ground" onclick="saveStatus('ลงกราวด์')">🟣 ลงกราวด์</button>
+      <button class="status loose" onclick="saveStatus('สายหลุด')">🟡 สายหลุด</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="title">📋 รายการที่พบ <span class="badge" id="totalBadge">0</span></div>
+    <div id="resultList"><div class="empty">ยังไม่มีรายการ</div></div>
+  </div>
+
+  <button class="action save" onclick="exportTXT()">💾 บันทึกเป็น TXT</button>
+  <button class="action clear" onclick="clearAll()">🗑️ ล้างข้อมูลทั้งหมด</button>
+</div>
+
+<script>
+const STORAGE_KEY="string0A_final_v1";
+let data=JSON.parse(localStorage.getItem(STORAGE_KEY)||"{}");
+let house=null,inv=null,cm=null,selected=null;
+
+function saveLocal(){localStorage.setItem(STORAGE_KEY,JSON.stringify(data));}
+
+function makeKey(h,i,cm){return h+"-"+(i===1?"10":"20")+cm;}
+function makeName(h,i,cm,s){return makeKey(h,i,cm)+"-"+s;}
+
+function renderHouses(){
+  const g=document.getElementById("houseGrid");g.innerHTML="";
+  for(let h=1;h<=37;h++){
+    const b=document.createElement("button");
+    b.className="pick"+(house===h?" active":"");
+    b.textContent=h;
+    b.onclick=()=>selectHouse(h);
+    g.appendChild(b);
+  }
+}
+
+function selectHouse(h){
+  house=h;inv=null;cm=null;selected=null;
+  document.getElementById("invCard").classList.remove("hidden");
+  document.getElementById("cmCard").classList.add("hidden");
+  document.getElementById("stringCard").classList.add("hidden");
+  document.getElementById("statusCard").classList.remove("show");
+  document.getElementById("inv1").classList.remove("active");
+  document.getElementById("inv2").classList.remove("active");
+  document.getElementById("path").textContent="House "+h;
+  renderHouses();renderResults();
+  document.getElementById("invCard").scrollIntoView({behavior:"smooth",block:"start"});
+}
+
+function selectInv(i){
+  inv=i;cm=null;selected=null;
+  document.getElementById("inv1").classList.toggle("active",i===1);
+  document.getElementById("inv2").classList.toggle("active",i===2);
+  document.getElementById("cmCard").classList.remove("hidden");
+  document.getElementById("stringCard").classList.add("hidden");
+  document.getElementById("statusCard").classList.remove("show");
+  document.getElementById("path").textContent="House "+house+" / INV "+i;
+  renderCMs();renderResults();
+  document.getElementById("cmCard").scrollIntoView({behavior:"smooth",block:"start"});
+}
+
+function renderCMs(){
+  const g=document.getElementById("cmGrid");
+  g.innerHTML="";
+  if(!house||!inv)return;
+  for(let n=1;n<=6;n++){
+    const b=document.createElement("button");
+    b.className="pick"+(cm===n?" active":"");
+    b.textContent="CM "+n;
+    b.onclick=()=>selectCM(n);
+    g.appendChild(b);
+  }
+}
+
+function selectCM(n){
+  cm=n;selected=null;
+  document.getElementById("cmCard").classList.remove("hidden");
+  document.getElementById("stringCard").classList.remove("hidden");
+  document.getElementById("statusCard").classList.remove("show");
+  document.getElementById("path").textContent="House "+house+" / INV "+inv+" / CM "+cm;
+  renderCMs();
+  renderStrings();
+  renderResults();
+  document.getElementById("stringCard").scrollIntoView({behavior:"smooth",block:"start"});
+}
+
+function renderStrings(){
+  const g=document.getElementById("stringGrid");
+  g.innerHTML="";
+  if(!house||!inv||!cm)return;
+
+  const key=makeKey(house,inv,cm);
+  const records=data[key]||{};
+  document.getElementById("currentCm").textContent="CM "+cm+"  ("+key+")";
+
+  for(let s=1;s<=14;s++){
+    const ss=String(s);
+    const b=document.createElement("button");
+    b.className="pick";
+    if(records[ss]){
+      b.classList.add("checked");
+      if(records[ss]!=="ปกติ")b.classList.add("problem");
+    }
+    b.textContent=key+"-"+ss;
+    b.onclick=()=>selectString(key,ss);
+    g.appendChild(b);
+  }
+
+  const count=Object.keys(records).length;
+  document.getElementById("countText").textContent=
+    count?"บันทึกแล้ว "+count+" String ใน "+key:"ยังไม่มีรายการใน "+key;
+}
+
+function selectString(key,s){
+  selected={key:key,string:s,name:key+"-"+s};
+  document.getElementById("selectedName").textContent=selected.name;
+  document.getElementById("statusCard").classList.add("show");
+  document.getElementById("statusCard").scrollIntoView({behavior:"smooth",block:"start"});
+}
+
+function saveStatus(status){
+  if(!selected)return;
+  if(!data[selected.key])data[selected.key]={};
+  data[selected.key][selected.string]=status;
+  saveLocal();
+  document.getElementById("statusCard").classList.remove("show");
+  selected=null;
+  renderStrings();renderResults();
+}
+
+function renderResults(){
+  const list=document.getElementById("resultList");list.innerHTML="";
+  let total=0;
+  const keys=Object.keys(data).sort((a,b)=>{
+    const x=a.split("-").map(Number),y=b.split("-").map(Number);
+    return x[0]-y[0]||x[1]-y[1];
+  });
+
+  for(const k of keys){
+    const records=data[k]||{};
+    const ss=Object.keys(records).sort((a,b)=>Number(a)-Number(b));
+    if(!ss.length)continue;
+    const block=document.createElement("div");block.className="result";
+    const head=document.createElement("div");head.className="result-head";head.textContent=k;
+    block.appendChild(head);
+
+    for(const s of ss){
+      total++;
+      const row=document.createElement("div");row.className="row";
+      const left=document.createElement("div");
+      left.innerHTML='<div class="row-name">'+k+'-'+s+'</div><div class="row-status">'+records[s]+'</div>';
+      const del=document.createElement("button");del.className="del";del.textContent="ลบ";
+      del.onclick=()=>deleteRecord(k,s);
+      row.append(left,del);block.appendChild(row);
+    }
+    list.appendChild(block);
+  }
+  if(!total)list.innerHTML='<div class="empty">ยังไม่มีรายการ</div>';
+  document.getElementById("totalBadge").textContent=total;
+}
+
+function deleteRecord(k,s){
+  if(!data[k])return;
+  delete data[k][s];
+  if(!Object.keys(data[k]).length)delete data[k];
+  saveLocal();
+  renderStrings();renderResults();
+}
+
+function exportTXT(){
+  const keys=Object.keys(data);
+  let total=0;
+  const now=new Date();
+  const stamp=now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0")+"-"+String(now.getDate()).padStart(2,"0")+" "+String(now.getHours()).padStart(2,"0")+":"+String(now.getMinutes()).padStart(2,"0");
+  const lines=["STRING 0A CHECK","บันทึก: "+stamp,"----------------------------------------"];
+
+  keys.sort((a,b)=>{
+    const x=a.split("-").map(Number),y=b.split("-").map(Number);
+    return x[0]-y[0]||x[1]-y[1];
+  });
+
+  for(const k of keys){
+    const records=data[k]||{};
+    const ss=Object.keys(records).sort((a,b)=>Number(a)-Number(b));
+    for(const s of ss){lines.push(k+"-"+s+" = "+records[s]);total++;}
+  }
+  if(!total){alert("ยังไม่มีข้อมูลให้บันทึก");return;}
+  lines.push("----------------------------------------","จำนวนรายการ: "+total);
+
+  const blob=new Blob(["\uFEFF"+lines.join("\n")],{type:"text/plain;charset=utf-8"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  const d=new Date();
+  a.href=url;
+  a.download="String_0A_"+d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")+".txt";
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+function clearAll(){
+  if(!confirm("ล้างรายการทั้งหมดใช่ไหม?"))return;
+  data={};saveLocal();selected=null;renderCMs();renderStrings();renderResults();
+}
+
+renderHouses();renderResults();
+</script>
+</body>
+</html>
